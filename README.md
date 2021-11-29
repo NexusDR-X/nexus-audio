@@ -1,5 +1,5 @@
 # Nexus DR-X Audio Configuration
-Version: 20201210.2  
+Version: 20201210.3  
 Author: Steve Magnuson, AG7GN  
 
 ## 1 Introduction
