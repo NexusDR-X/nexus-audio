@@ -16,7 +16,8 @@ echo >&2 -e "----------->  Moving ALSA and pulseaudio configuration files into p
 sudo cp -f nexus-audio/etc/asound.conf /etc/
 cp -f nexus-audio/config/pulse/default.pa $HOME/.config/pulse/default.pa 
 sudo cp -f nexus-audio/etc/udev/rules.d/*.rules /etc/udev/rules.d/
-echo >&2 -e "----------->  Done.\n______"#echo >&2 "Restarting pulseaudio..."
+echo >&2 -e "----------->  Done.\n______"
+#echo >&2 "Restarting pulseaudio..."
 #systemctl --user restart pulseaudio 
 #echo >&2 "Done."
 exit 0
