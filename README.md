@@ -1,5 +1,5 @@
 # Nexus DR-X Audio Configuration
-Version: 20201210.3  
+Version: 20220103.1  
 Author: Steve Magnuson, AG7GN  
 
 ## 1 Introduction
@@ -70,13 +70,18 @@ This tells PulsAudio to create separate left and right channel playback (sink) a
 The next lines in `$HOME/.config/pulse/default.pa` are not related to the Fe-Pi:
 
 	# Create a stereo combined sink for the headphone and HDMI audio interfaces
-	# so we don't have to know which is active at any given time
-	load-module module-combine-sink sink_name=system-audio-playback \
-	sink_properties=device.description='"Combined\ headphone\ and\ HDMI\ sink"' \
-	slaves=alsa_output.platform-bcm2835_audio.analog-stereo,\
-	alsa_output.platform-bcm2835_audio.digital-stereo channels=2
+	# so we don't have to know which is active at any given time.
+	# With Bullseye OS, PulseAudio does not yet recognize the vc4hdmi0 and vc4hdmi1 audio interfaces
+	# (for each of the 2 micro HDMI ports).
+	.ifexists alsa_card.platform-bcm2835_audio.2
+	load-module module-combine-sink sink_name=system-audio-playback sink_properties=device.description='"Combined\ headphone\ and\ HDMI\ sink"' slaves=alsa_output.platform-bcm2835_audio.analog-stereo,alsa_output.platform-bcm2835_audio.digital-stereo channels=2
+	.else
+	load-module module-combine-sink sink_name=system-audio-playback sink_properties=device.description='"Headphone\ sink"' slaves=alsa_output.platform-bcm2835_audio.analog-stereo channels=2
+	.endif
 
-The above line creates a combined sink (playback) for both the analog (headphone) and digital (HDMI) audio interfaces that are built in to the Pi. The combine sink allows audio to go to BOTH analog and HDMI sound cards so we don't have to figure out which sound card the user has selected for system sounds (like alerts in Fldigi). Note that I named the combined sink `system-audio-playback`. The `slaves` are the IDs of the Pi's built-in analog and digital sound cards.
+__For Buster OS__: The above lines create a combined sink (playback) for both the analog (headphone) and digital (HDMI) audio interfaces that are built in to the Pi. The combine sink allows audio to go to BOTH analog and HDMI sound cards so we don't have to figure out which sound card the user has selected for system sounds (like alerts in Fldigi). Note that I named the combined sink `system-audio-playback`. The `slaves` are the IDs of the Pi's built-in analog and digital sound cards. 
+
+__For Bullseye OS__: The vc4hdmi0 and vc4hdmi1 audio interfaces are not yet recognized, so the `load-module` after `.else` is executed.
 
 Finally, the last lines in `$HOME/.config/pulse/default.pa` are:
 
