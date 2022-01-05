@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
 #
 #
-VERSION="2.0.2"
-echo >&2 -e "----------->  Adding Fe-Pi dtoverlay if needed..."
+VERSION="2.1.0"
+echo >&2 -e "----->  Adding Fe-Pi dtoverlay if needed..."
 CONFIG_="/boot/config.txt"
 if ! grep -q "^dtoverlay=fe-pi-audio" $CONFIG_
 then
-	echo "# Enable Fe Pi audio card"  | sudo tee --append $CONFIG_
-	echo "dtoverlay=fe-pi-audio" | sudo tee --append $CONFIG_
+	echo -e "# Enable Fe Pi audio card\ndtoverlay=fe-pi-audio" | sudo tee --append $CONFIG_
 fi
-echo >&2 -e "----------->  Done.\n______"
+echo >&2 -e "----->  Done.\n______"
 
-echo >&2 -e "----------->  Moving ALSA and pulseaudio configuration files into position..."
+echo >&2 -e "----->  Copying ALSA and pulseaudio configuration files..."
 [[ -f /etc/asound.conf ]] && sudo mv -f /etc/asound.conf /etc/asound.conf.previous
 sudo cp -f nexus-audio/etc/asound.conf /etc/
 cp -f nexus-audio/config/pulse/default.pa $HOME/.config/pulse/default.pa 
 sudo cp -f nexus-audio/etc/udev/rules.d/*.rules /etc/udev/rules.d/
-echo >&2 -e "----------->  Done.\n______"
+echo >&2 -e "----->  Done.\n______"
+echo >&2 -e "----->  Copying audio monitor desktop files..."
+sudo cp -f nexus-audio/usr/local/share/applications/* /usr/local/share/applications/
+echo >&2 -e "----->  Done.\n______"
 #echo >&2 "Restarting pulseaudio..."
 #systemctl --user restart pulseaudio 
 #echo >&2 "Done."

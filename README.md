@@ -67,35 +67,6 @@ The next lines in `$HOME/.config/pulse/default.pa` are:
 
 This tells PulsAudio to create separate left and right channel playback (sink) and capture (source) virtual interfaces that we can tell ALSA to use for those ham radio applications like Direwolf that can't use PulseAudio directly.
 
-The next lines in `$HOME/.config/pulse/default.pa` are not related to the Fe-Pi:
-
-	# Create a stereo combined sink for the headphone and HDMI audio interfaces
-	# so we don't have to know which is active at any given time.
-	# With Bullseye OS, PulseAudio does not yet recognize the vc4hdmi0 and vc4hdmi1 audio interfaces
-	# (for each of the 2 micro HDMI ports).
-	.ifexists alsa_card.platform-bcm2835_audio.2
-	load-module module-combine-sink sink_name=system-audio-playback sink_properties=device.description='"Combined\ headphone\ and\ HDMI\ sink"' slaves=alsa_output.platform-bcm2835_audio.analog-stereo,alsa_output.platform-bcm2835_audio.digital-stereo channels=2
-	.else
-	load-module module-combine-sink sink_name=system-audio-playback sink_properties=device.description='"Headphone\ sink"' slaves=alsa_output.platform-bcm2835_audio.analog-stereo channels=2
-	.endif
-
-__For Buster OS__: The above lines create a combined sink (playback) for both the analog (headphone) and digital (HDMI) audio interfaces that are built in to the Pi. The combine sink allows audio to go to BOTH analog and HDMI sound cards so we don't have to figure out which sound card the user has selected for system sounds (like alerts in Fldigi). Note that I named the combined sink `system-audio-playback`. The `slaves` are the IDs of the Pi's built-in analog and digital sound cards. 
-
-__For Bullseye OS__: The vc4hdmi0 and vc4hdmi1 audio interfaces are not yet recognized, so the `load-module` after `.else` is executed.
-
-Finally, the last lines in `$HOME/.config/pulse/default.pa` are:
-
-	# Create a left sink from combined headphone/HDMI built-in sound card sink 
-	load-module module-remap-sink sink_name="system-audio-playback-left" \
-	master="system-audio-playback" channels=1 channel_map="mono" \
-	master_channel_map="front-left" remix=no
-
-	# Create a right sink from combined headphone/HDMI built-in sound card sink
-	load-module module-remap-sink sink_name="system-audio-playback-right" \
-	master="system-audio-playback" channels=1 channel_map="mono" \
-	master_channel_map="front-right" remix=no
-
-The above lines create separate sinks for the left and right radios, corresponding to the left and right channels of the Pi's built in sound cards. These sinks can be selected in Fldigi, for example, to send alerts from the left radio to the left channel of the built-in sound cards and alerts from the right radio to the right channel of the built-in sound cards. 
 
 ### 2.3 Create virtual ALSA interfaces
 
@@ -118,18 +89,6 @@ Virtual ALSA interfaces are defined in `/etc/asound.conf`:
 	pcm.fepi-playback-right {
 	   type pulse
 	   device "fepi-playback-right"
-	}
-	pcm.system-audio-playback {
-	   type pulse
-	   device "system-audio-playback"
-	}
-	pcm.system-audio-playback-left {
-	   type pulse
-	   device "system-audio-playback-left"
-	}
-	pcm.system-audio-playback-right {
-	   type pulse
-	   device "system-audio-playback-right"
 	}
 
 ## 3 How Ham Radio apps use PulseAudio
@@ -236,15 +195,17 @@ If you want to restore the settings when the desktop launches, add the following
 
 ### 4.3 Adjusting the Volume of the Built-In Sound Cards
 
-The Pi's built-in sound interface can output audio to the audio jack on the board.  This is the __Analog__ output.  It can also send audio to HDMI-attached monitors that have built-in speakers.  This is the __HDMI__ output.  To toggle between __Analog__ and __HDMI__, right-click on the speaker icon on the menu bar in the upper right corner. Select __AV Jack__ for audio out of the headphone jack built in to your Pi or __HDMI__ for audio sent to your audio-equipped monitor. 
+The Pi's built-in sound interface can output audio to the audio jack on the board.  This is the __Analog__ output.  It can also send audio to HDMI-attached monitors that have built-in speakers.  This is the __HDMI__ output.  
 
-To adjust the level of the audio on your Pi's speakers, use the speaker's volume knob if it has one.  The speaker icon in the upper right of the Pi desktop also controls the Pi's speaker volume.  
+- To toggle between __Analog__ and __HDMI__ outputs, right-click on the speaker icon on the menu bar in the upper right corner, then click __Audio Outputs__. Select __AV Jack__ for audio out of the headphone jack built in to your Pi or __HDMI__ for audio sent to your audio-equipped monitor. __DO NOT__ select __Fe-Pi!__. If you do, your alerts will be sent to your radio's audio input.
 
-Another way is to adjust the volume in alsamixer (__0 bcm2835 HDMI__ and __1 bcm2835 Headphones__ devices).  
+To adjust the level of the audio on your Pi's speakers, use the speaker's volume knob if it has one.  The speaker icon in the upper right of the Pi desktop also controls the Pi's speaker volume. Left-click on it to see the volume control. 
+
+Another way is to adjust the volume in alsamixer (__vc4-hdmi__ and __1 bcm2835 Headphones__ devices).  
 
 ## 5 (Optional) Monitor Radio's TX and/or RX audio on Pi's Speakers
 
-If you have speakers connected to the Pi, you can configure `pulseaudio` to monitor the audio to and/or from the radio.  Click __Raspberry > Hamradio > Start Radio RX Montitor or Start Radio TX Monitor__ from the menu. __Raspberry > Hamradio > Stop Radio TX and RX Monitors__ stops all the monitors.
+If you have speakers connected to the Pi, you can configure `pulseaudio` to monitor the audio to and/or from the radio.  Click __Raspberry > Hamradio > Start Radio RX Monitor or Start Radio TX Monitor__ from the menu. __Raspberry > Hamradio > Stop Radio TX and RX Monitors__ stops all the monitors.
 
 ## 6 (Optional) Using Fldigi 4.1.09 (and later) Alerts, Notifications and RX Monitoring
 
@@ -256,10 +217,16 @@ Note that Fldigi [Alerts](http://www.w1hkj.com/FldigiHelp/audio_alerts_page.html
 
 The sound interface used for Alerts and RX Monitoring is set in __Configure > Config Dialog > Soundcard > Devices__.  
 
-1.	In the __Alerts/RX Audio__ section, select `system-audio-playback-left` or `system-audio-playback-right` depending on what radio and instance of Fldigi you're using, and check `Enable Audio Alerts`.  Click __Save__ and __Close__.
+1.	In the __Audio device shared by Audio Alerts and Rx Monitor__ section, select `sysdefault` and check `Enable Audio Alerts`.  Click __Save__ and __Close__.
+
+	![Fldigi Soundcard Configuration](img/fldigi-soundcard.png)
+
+
 1.	In the left pane of the __Fldigi configuration__ window, select __Alerts__ to set up your alerts.  
 
-All alerts will now play through the Pi's built-in sound interface.  Don't forget to select __Analog__ or __HDMI__ output as described earlier.
+	![Fldigi Alerts](img/fldigi-alerts.png)
+
+All alerts will now play through the Pi's default sound interface. Remember that to toggle the output between the __AV Jack__ and __HDMI__, right-click on the speaker icon in the task bar on the top of the desktop, then click __Audio Outputs__.
 
 ### 6.2 Fldigi Notifications
 
@@ -268,23 +235,23 @@ Unlike Alerts, Fldigi [Notifications](http://www.w1hkj.com/FldigiHelp/notifier_p
 1.	Enter your search criteria.
 2.	Under __Run Program__, enter the following:
 
-		aplay -D system-audio-playback <path-to-WAV-file>
+		aplay <path-to-WAV-file>
 	For example:
 
-		aplay -D system-audio-playback /home/pi/myalert.wav
+		aplay /home/pi/myalert.wav
 
 This will send audio triggered by a Notification to the built-in audio interface.  Don't forget to select __Analog__ or __HDMI__ output as described earlier.
 
-You can also use `paplay`, the PulseAudio player, which can play OGG audio files in addition to WAV files.  You can optionally tell `paplay` what audio sink to use.  Example:
+You can also use `paplay`, the PulseAudio player, which can play OGG audio files in addition to WAV files.  Example:
 
-		paplay --device=system-audio-playback /home/pi/fsq_ag7gn.ogg
+		paplay /home/pi/fsq_ag7gn.ogg
 		
 Use this command list the audio formats `paplay` supports:
 
 		paplay --list-file-formats
 
-Both `aplay` and `paplay` are installed by default in Raspbian Buster.
+Both `aplay` and `paplay` are installed by default in RaspiOS.
 
 ### 6.3 Fldigi RX Monitoring
 
-Fldigi has built-in audio monitoring capability.  You can toggle RX monitoring on and off and apply filtering to the received audio by going __View > Rx Audio Dialog__.  The audio will be played through the built-in audio interface.  Don't forget to select __Analog__ or __HDMI__ output as described earlier. Note that you must have Audio Alerts configured and enabled in Fldigi for this to work (__Configure > Config Dialog > Soundcard > Devices__).
+Fldigi has built-in audio monitoring capability.  You can toggle RX monitoring on and off and apply filtering to the received audio by going __View > Rx Audio Dialog__.  The audio will be played through the built-in audio interface.  Don't forget to select __AV Jack__ or __HDMI__ output as described earlier. Note that you must have Audio Alerts configured and enabled in Fldigi for this to work (__Configure > Config Dialog > Soundcard > Devices__).
