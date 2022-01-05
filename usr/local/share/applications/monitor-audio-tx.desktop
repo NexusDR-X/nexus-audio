@@ -7,4 +7,4 @@ Icon=/usr/share/icons/nuoveXT2/32x32/status/stock_volume.png
 Terminal=false
 Type=Application
 Categories=HamRadio;
-Name[en_US]=Start Radio TX Monitor
+Name[en_US]=Start TX Audio Monitor
