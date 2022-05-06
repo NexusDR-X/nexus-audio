@@ -191,7 +191,7 @@ you can run this command to save the settings (__choose your own file name/locat
 		
 If you want to restore the settings when the desktop launches, add the following line __BEFORE__  the `@xscreensaver` line in `/etc/xdg/lxsession/LXDE-pi/autostart`:
 
-		@sudo alsactl --file /home/pi/mysoundsettings1.state restore
+		@sudo alsactl --file $HOME/mysoundsettings1.state restore
 
 ### 4.3 Adjusting the Volume of the Built-In Sound Cards
 
@@ -238,13 +238,13 @@ Unlike Alerts, Fldigi [Notifications](http://www.w1hkj.com/FldigiHelp/notifier_p
 		aplay <path-to-WAV-file>
 	For example:
 
-		aplay /home/pi/myalert.wav
+		aplay $HOME/myalert.wav
 
 This will send audio triggered by a Notification to the built-in audio interface.  Don't forget to select __Analog__ or __HDMI__ output as described earlier.
 
 You can also use `paplay`, the PulseAudio player, which can play OGG audio files in addition to WAV files.  Example:
 
-		paplay /home/pi/fsq_ag7gn.ogg
+		paplay $HOME/fsq_ag7gn.ogg
 		
 Use this command list the audio formats `paplay` supports:
 
