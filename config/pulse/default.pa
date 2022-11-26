@@ -1,7 +1,10 @@
 .include /etc/pulse/default.pa
 
-# Fe-Pi card setup
-load-module module-alsa-card device_id="Audio" name="fepi" card_name="fepi" namereg_fail=false tsched=yes fixed_latency_range=no ignore_dB=no deferred_volume=yes use_ucm=no rate=96000 format=s16le source_name="fepi-capture" sink_name="fepi-playback" mmap=yes profile_set=default.conf
+# Fe-Pi card setup revision 2
+# These arguments: tsched=no fixed_latency_range=yes fragments=1 fragment_size=15
+# are needed to eliminate a ~1 second audio delay when using packet (Direwolf)
+# See https://github.com/enyone/blog/blob/master/_posts/2017-02-05-Pulseaudio-and-latency.md.
+load-module module-alsa-card device_id="Audio" name="fepi" card_name="fepi" namereg_fail=false tsched=no fixed_latency_range=yes fragments=1 fragment_size=15 ignore_dB=no deferred_volume=yes use_ucm=no rate=96000 format=s16le source_name="fepi-capture" sink_name="fepi-playback" mmap=yes profile_set=default.conf
 
 #  Create the left source/sink from the Fe-Pi
 load-module module-remap-sink sink_name="fepi-playback-left" master="fepi-playback" channels=1 channel_map="mono" master_channel_map="front-left" remix=no

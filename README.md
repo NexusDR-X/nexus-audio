@@ -1,5 +1,5 @@
 # Nexus DR-X Audio Configuration
-Version: 20220103.1  
+Version: 20220103.2  
 Author: Steve Magnuson, AG7GN  
 
 ## 1 Introduction
@@ -10,7 +10,7 @@ The Nexus DR-X image has always used PulseAudio to support simultaneous use of l
 
 As of early December 2020, by default PulseAudio is configured to automatically detect sound devices attached to the Pi. This works fine for the built in analog (the TRS or headphone jack built in to the Pi) and digital (audio output from the HDMI ports on the Pi). However, PulseAudio fails spectacularly when it comes to setting up the Fe-Pi audio board.
 
-To rectify this, I finally arrived a solution that minimally affects the default PulseAudio configuration yet provides all the functionality we need to use the Fe-Pi audio card for ham radio applications.
+To rectify this, I finally arrived a solution that minimally affects the default PulseAudio configuration yet provides all the functionality we need to use the Fe-Pi audio card via PulseAudio for ham radio applications.
 
 ## 2 PulseAudio Modifications to Support Fe-Pi
 
@@ -42,11 +42,14 @@ The remainder of `$HOME/.config/pulse/default.pa` contains:
 
 	# Fe-Pi card setup
 	load-module module-alsa-card device_id="Audio" name="fepi" card_name="fepi" \
-	namereg_fail=false tsched=yes fixed_latency_range=no ignore_dB=no deferred_volume=yes \
+	namereg_fail=false tsched=no fixed_latency_range=yes fragments=1 \
+	fragment_size=15 ignore_dB=no deferred_volume=yes \
 	use_ucm=no rate=96000 format=s16le source_name="fepi-capture" \
 	sink_name="fepi-playback" mmap=yes profile_set=default.conf
 	
-This tells PulseAudio to manually load the Fe-Pi card (`load-module module-alsa-card device_id="Audio"`), assign it the name `fepi`, set up some other audio parameters and define a PulseAudio source of `fepi-capture` and a sink of `fepi-playback`. It also tells PulseAudio to use the Stereo In/Out profile in `/usr/share/pulseaudio/alsa-mixer/profile-sets/default.conf`.
+This tells PulseAudio to manually load the Fe-Pi card (`load-module module-alsa-card device_id="Audio"`), assign it the name `fepi`, set up some other audio parameters and define a PulseAudio source of `fepi-capture` and a sink of `fepi-playback`. It also tells PulseAudio to use the Stereo In/Out profile in `/usr/share/pulseaudio/alsa-mixer/profile-sets/default.conf`. 
+
+These arguments: `tsched=no fixed_latency_range=yes fragments=1 fragment_size=15` are used to reduce the delay in the audio path. Without them, there's ~1 second delay between PTT activation and sending audio to the radio when using packet (Direwolf). These values a from [a blog post about PulseAudio latency by Juho Tykkälä](https://github.com/enyone/blog/blob/master/_posts/2017-02-05-Pulseaudio-and-latency.md).
 
 The next lines in `$HOME/.config/pulse/default.pa` are:
 
@@ -250,8 +253,48 @@ Use this command list the audio formats `paplay` supports:
 
 		paplay --list-file-formats
 
-Both `aplay` and `paplay` are installed by default in RaspiOS.
+Both `aplay` and `paplay` are installed by default in RaspbianOS.
 
 ### 6.3 Fldigi RX Monitoring
 
 Fldigi has built-in audio monitoring capability.  You can toggle RX monitoring on and off and apply filtering to the received audio by going __View > Rx Audio Dialog__.  The audio will be played through the built-in audio interface.  Don't forget to select __AV Jack__ or __HDMI__ output as described earlier. Note that you must have Audio Alerts configured and enabled in Fldigi for this to work (__Configure > Config Dialog > Soundcard > Devices__).
+
+## 7 Non-PulseAudio Alternative
+
+You can use the FePi card and each of the stereo channels independently using ALSA alone without PulseAudio. Note that the TX/RX Audio Monitoring options in the Nexus DR-X Hamradio menu will no longer work if you use this Non-PulseAudio alternative.
+
+If you still want to do this, follow these steps: 
+
+1. Stop all ham radio apps.
+
+1. Open a Terminal window.
+
+1. Stop PulseAudio by running these commands:
+
+		systemctl --user stop pulseaudio.socket
+		systemctl --user stop pulseaudio.service
+
+1. Disable `~/.config/pulse/default.pa` by renaming it to something else:
+
+		mv ~/.config/pulse/default.pa ~/.config/pulse/default.pa.disabled
+
+1. Copy the ALSA `asound.conf`:
+
+		sudo cp /etc/asound.conf /etc/asound.conf.previous
+		sudo cp /etc/asound.conf.alsa-fepi /etc/asound.conf
+
+1. Start PulseAudio:
+
+		systemctl --user start pulseaudio
+
+	Note that since you renamed `~/.config/pulse/default.pa`, the Fe-Pi card is now not part of PulseAudio.
+	
+1. In Fldigi, you need to change the sound device:
+
+	- Run Fldigi, select __Config Dialog > Configure > Soundcard > Devices__.
+	- Uncheck __PulseAudio__.
+	- Check __PortAudio__ and select __fepi-capture-[right|left]__ for __Capture__ and __fepi-playback-[right|left]__ for __Playback__.
+	- Click __Save__ and __Close__.
+	
+1. Direwolf should work the same as it did before if you were using the __fepi-capture-[right|left]__ and __fepi-playback-[right|left]__ sound devices.
+

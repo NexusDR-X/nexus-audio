@@ -1,0 +1,42 @@
+pcm_slave.fepi {
+	pcm {
+		type hw
+		card Audio
+	}
+	channels 2
+   periods 0
+   period_time 0
+}
+
+# playback left and right must have the same
+# ipc_key and it must be different from the
+# capture ipc_key. Likewise, capture left and
+# right must have the same ipc_key and it must 
+# be different from the playback ipc_key.
+pcm.fepi-playback-left {
+   type dshare
+   ipc_key 202210090
+   slave fepi
+   bindings [ 0 ]
+}
+
+pcm.fepi-playback-right {
+   type dshare
+   ipc_key 202210090
+   slave fepi
+   bindings [ 1 ]
+}
+
+pcm.fepi-capture-left {
+   type dsnoop
+   ipc_key 202210091
+   slave fepi
+   bindings [ 0 ]
+}
+
+pcm.fepi-capture-right {
+   type dsnoop
+   ipc_key 202210091
+   slave fepi
+   bindings [ 1 ]
+}
