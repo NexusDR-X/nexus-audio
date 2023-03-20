@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-#
-VERSION="2.1.1"
+# Version 2.2.0 disables pulseaudio for the FePi and so cannot use the pulse monitor apps
+VERSION="2.2.0"
 echo >&2 -e "----->  Adding Fe-Pi dtoverlay if needed..."
 CONFIG_="/boot/config.txt"
 if ! grep -q "^dtoverlay=fe-pi-audio" $CONFIG_
@@ -17,11 +17,14 @@ systemctl --user stop pulseaudio.service
 echo >&2 "Done."
 [[ -f /etc/asound.conf ]] && sudo mv -f /etc/asound.conf /etc/asound.conf.previous
 sudo cp -f nexus-audio/etc/asound.conf* /etc/
-cp -f nexus-audio/config/pulse/default.pa $HOME/.config/pulse/default.pa 
+#cp -f nexus-audio/config/pulse/default.pa $HOME/.config/pulse/default.pa
+sudo cp -f /etc/asound.conf.alsa-fepi /etc/asound.conf
+rm -f $HOME/.config/pulse/default.pa
 sudo cp -f nexus-audio/etc/udev/rules.d/*.rules /etc/udev/rules.d/
 echo >&2 -e "----->  Done.\n______"
-echo >&2 -e "----->  Copying audio monitor desktop files..."
-sudo cp -f nexus-audio/usr/local/share/applications/* /usr/local/share/applications/
+#echo >&2 -e "----->  Copying audio monitor desktop files..."
+#sudo cp -f nexus-audio/usr/local/share/applications/* /usr/local/share/applications/
+sudo rm -f /usr/local/share/applications/monitor-audio-*
 echo >&2 -e "----->  Done.\n______"
 echo >&2 "Starting pulseaudio..."
 systemctl --user start pulseaudio 
