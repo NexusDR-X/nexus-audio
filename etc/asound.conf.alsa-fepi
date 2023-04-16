@@ -4,8 +4,15 @@ pcm_slave.fepi {
 		card Audio
 	}
 	channels 2
-   periods 0
+   # For sample rate 48000 (recommended) use next 3 lines...
+   rate 48000
+   #periods 0
    period_time 0
+   # ...or for sample rate 96000 use next 3 lines:
+   #rate 96000
+   period_size 1024
+   #period_size 2048
+   buffer_size 8192
 }
 
 # playback left and right must have the same
@@ -13,30 +20,78 @@ pcm_slave.fepi {
 # capture ipc_key. Likewise, capture left and
 # right must have the same ipc_key and it must 
 # be different from the playback ipc_key.
-pcm.fepi-playback-left {
-   type dshare
+pcm.fepi-dmix-left {
+   type dmix
    ipc_key 202210090
    slave fepi
-   bindings [ 0 ]
+   bindings.0 0
+}
+
+pcm.fepi-playback-left {
+   type plug
+   slave.pcm "fepi-dmix-left"
+   hint.description "Fe-Pi left channel TX audio plug"
+}
+
+pcm.fepi-dmix-right {
+   type dmix
+   ipc_key 202210090
+   slave fepi
+   bindings.0 1
 }
 
 pcm.fepi-playback-right {
-   type dshare
-   ipc_key 202210090
+   type plug
+   slave.pcm "fepi-dmix-right"
+   hint.description "Fe-Pi right channel TX audio plug"
+}
+
+pcm.fepi-dsnoop-left {
+   type dsnoop
+   ipc_key 202210091
    slave fepi
-   bindings [ 1 ]
+   bindings.0 0
 }
 
 pcm.fepi-capture-left {
+   type plug
+   slave.pcm "fepi-dsnoop-left"
+   hint.description "Fe-Pi left channel RX audio plug"
+}
+
+pcm.fepi-dsnoop-right {
    type dsnoop
    ipc_key 202210091
    slave fepi
-   bindings [ 0 ]
+   bindings.0 1
 }
 
 pcm.fepi-capture-right {
-   type dsnoop
-   ipc_key 202210091
-   slave fepi
-   bindings [ 1 ]
+   type plug
+   slave.pcm "fepi-dsnoop-right"
+   hint.description "Fe-Pi right channel RX audio plug"
+}
+
+pcm.fepi-asym-left {
+   type asym
+   playback.pcm "fepi-dmix-left"
+   capture.pcm "fepi-dsnoop-left"
+}
+
+pcm.fepi-left {
+   type plug
+   slave.pcm "fepi-asym-left"
+   hint.description "Fe-Pi left channel TX and RX plug"
+}
+
+pcm.fepi-asym-right {
+   type asym
+   playback.pcm "fepi-dmix-right"
+   capture.pcm "fepi-dsnoop-right"
+}
+
+pcm.fepi-right {
+   type plug
+   slave.pcm "fepi-asym-right"
+   hint.description "Fe-Pi right channel TX and RX plug"
 }

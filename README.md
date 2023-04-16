@@ -1,5 +1,5 @@
 # Nexus DR-X Audio Configuration
-Version: 20230321.0  
+Version: 20230402.0  
 Author: Steve Magnuson, AG7GN  
 
 ## 1 Introduction
@@ -26,6 +26,15 @@ The `89` at the beginning of the file name is used to determine the order in whi
 In order to enable different applications to use the Fe-Pi's left and right channels independently, it is necessary to create separate interfaces for each channel.
 These interfaces are defined in `/etc/asound.conf` (shown below).  This configuration files tells ALSA to create capture and playback interfaces for the left and right channels. These interfaces can then be used as Port Audio devices in applications like Direwolf and Fldigi.
 
+#### Notes and Observations
+
+- The FePi is capable of a maximum sample rate of 96000. By default, it uses 48000. By leaving it undefined in the `pcm_slave.fepi` section in `/etc/asound.conf`, the rate can be set by the application using the FePi (like Direwolf or Fldigi). HOWEVER, it seems that decoding is hampered if this is NOT set, so leave it at 96000.
+- The `period_size` and `buffer_size` settings are needed to prevent underruns when 96000 is used. Setting `periods` and `period_time` to 0 prevent audio stuttering.
+- When using `dshare` to split the left and right playback channels, Direwolf would fail to start at every other attempt. Using `dmix` instead of `dshare` solved that problem.
+- It's not a good idea to use the `dmix`, `dsnoop`, and `asym` interfaces directly. Instead, use the `plug` devices that reference those interfaces defined below so that the applications can set the `rate` and possibly other attributes.
+- [Good ALSA reference](https://www.alsa-project.org/alsa-doc/alsa-lib/pcm_plugins.html).
+
+#### Contents of `asound.conf`
 ```
 pcm_slave.fepi {
 	pcm {
@@ -33,41 +42,102 @@ pcm_slave.fepi {
 		card Audio
 	}
 	channels 2
-   periods 0
+   # Set sample rate 48000 (recommended) even though
+   # FePi can do 96000
+   rate 48000
+   #periods 0
    period_time 0
+   period_size 1024
+   #period_size 2048
+   buffer_size 8192
 }
 
-# playback left and right must have the same
+# dmix left and right must have the same
 # ipc_key and it must be different from the
-# capture ipc_key. Likewise, capture left and
+# dsnoop ipc_key. Likewise, dsnoop left and
 # right must have the same ipc_key and it must 
-# be different from the playback ipc_key.
-pcm.fepi-playback-left {
-   type dshare
+# be different from the dmix ipc_key.
+#
+# When dshare is used instead of dmix, Direwolf
+# fails to start every other time, generating this
+# message:
+# ALSA lib pcm_dshare.c:852:(snd_pcm_dshare_open) destination channel specified in bindings is already used
+# Using dmix instead of dshare solves this problem.
+
+pcm.fepi-dmix-left {
+   type dmix
    ipc_key 202210090
    slave fepi
-   bindings [ 0 ]
+   bindings.0 0
+}
+
+pcm.fepi-playback-left {
+   type plug
+   slave.pcm "fepi-dmix-left"
+   hint.description "Fe-Pi left channel TX audio plug"
+}
+
+pcm.fepi-dmix-right {
+   type dmix
+   ipc_key 202210090
+   slave fepi
+   bindings.0 1
 }
 
 pcm.fepi-playback-right {
-   type dshare
-   ipc_key 202210090
+   type plug
+   slave.pcm "fepi-dmix-right"
+   hint.description "Fe-Pi right channel TX audio plug"
+}
+
+pcm.fepi-dsnoop-left {
+   type dsnoop
+   ipc_key 202210091
    slave fepi
-   bindings [ 1 ]
+   bindings.0 0
 }
 
 pcm.fepi-capture-left {
+   type plug
+   slave.pcm "fepi-dsnoop-left"
+   hint.description "Fe-Pi left channel RX audio plug"
+}
+
+pcm.fepi-dsnoop-right {
    type dsnoop
    ipc_key 202210091
    slave fepi
-   bindings [ 0 ]
+   bindings.0 1
 }
 
 pcm.fepi-capture-right {
-   type dsnoop
-   ipc_key 202210091
-   slave fepi
-   bindings [ 1 ]
+   type plug
+   slave.pcm "fepi-dsnoop-right"
+   hint.description "Fe-Pi right channel RX audio plug"
+}
+
+pcm.fepi-asym-left {
+   type asym
+   playback.pcm "fepi-dmix-left"
+   capture.pcm "fepi-dsnoop-left"
+}
+
+pcm.fepi-left {
+   type plug
+   slave.pcm "fepi-asym-left"
+   hint.description "Fe-Pi left channel TX and RX plug"
+}
+
+pcm.fepi-asym-right {
+   type asym
+   playback.pcm "fepi-dmix-right"
+   capture.pcm "fepi-dsnoop-right"
+}
+
+pcm.fepi-right {
+   type plug
+   slave.pcm "fepi-asym-right"
+   hint.description "Fe-Pi right channel TX and RX plug"
 }
 ```
 
